@@ -1,7 +1,7 @@
 Summary: ODBC driver for MySQL
 Name: mysql-connector-odbc
 Version: 5.2.5
-Release: 2%{?dist}
+Release: 6%{?dist}
 Group: System Environment/Libraries
 URL: http://dev.mysql.com/downloads/connector/odbc/
 # exceptions allow library to be linked with most open source SW,
@@ -32,6 +32,7 @@ Patch7: myodbc-libdir.patch
 Patch8: mysql-connector-odbc-buffsize.patch
 Patch9: mysql-connector-odbc-cleartext.patch
 Patch10: mysql-connector-odbc-cond.patch
+Patch11: mysql-connector-odbc-5.2.5-aarch64.patch
 
 BuildRequires: mysql-devel unixODBC-devel
 BuildRequires: cmake
@@ -55,6 +56,7 @@ tar xfz %{SOURCE1}
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 
 %build
 # mysql 5.5.10 has stopped #define'ing THREAD in its exports, and has
@@ -101,6 +103,21 @@ rm -rf $RPM_BUILD_ROOT/usr/test
 %{_libdir}/lib*so
 
 %changelog
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 5.2.5-6
+- Mass rebuild 2014-01-24
+
+* Wed Jan 15 2014 Honza Horak <hhorak@redhat.com> - 5.2.5-5
+- Rebuild for mariadb-libs
+  Related: #1045013
+
+* Wed Jan  8 2014 Marcin Juszkiewicz <mjuszkiewicz redhat com> - 5.2.5-4
+- Build failed because whether to use lib64 or not is done by checking
+  list of known 64-bit architectures. So added AArch64 to that list.
+  Resolves: #1041348
+
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 5.2.5-3
+- Mass rebuild 2013-12-27
+
 * Mon Jun 17 2013 Honza Horak <hhorak@redhat.com> - 5.2.5-2
 - Avoid potential segfault
   Resolves: #974794
