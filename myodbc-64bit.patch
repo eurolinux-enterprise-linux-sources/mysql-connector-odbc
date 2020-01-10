@@ -1,0 +1,66 @@
+Fix some 64-bitness issues arising from unixODBC 2.2.14 changes.
+
+diff -up mysql-connector-odbc-5.2.4-src/driver/utility.c.p3 mysql-connector-odbc-5.2.4-src/driver/utility.c
+--- mysql-connector-odbc-5.2.4-src/driver/utility.c.p3	2013-01-24 18:43:33.000000000 +0100
++++ mysql-connector-odbc-5.2.4-src/driver/utility.c	2013-02-22 13:22:14.142767103 +0100
+@@ -1219,7 +1219,7 @@ SQLLEN fill_display_size_buff(char *buff
+ {
+   /* See comment for fill_transfer_oct_len_buff()*/
+   SQLLEN size= get_display_size(stmt, field);
+-  sprintf(buff,size == SQL_NO_TOTAL ? "%d" : (sizeof(SQLLEN) == 4 ? "%lu" : "%lld"), size);
++  sprintf(buff, (size == SQL_NO_TOTAL ? "%ld" : "%lu"), size);
+ 
+   return size;
+ }
+@@ -1242,7 +1242,7 @@ SQLLEN fill_transfer_oct_len_buff(char *
+   */
+   SQLLEN len= get_transfer_octet_length(stmt, field);
+ 
+-  sprintf(buff, len == SQL_NO_TOTAL ? "%d" : (sizeof(SQLLEN) == 4 ? "%lu" : "%lld"), len );
++  sprintf(buff, (len == SQL_NO_TOTAL ? "%ld" : "%lu"), len );
+ 
+   return len;
+ }
+@@ -1259,8 +1259,7 @@ SQLLEN fill_transfer_oct_len_buff(char *
+ SQLULEN fill_column_size_buff(char *buff, STMT *stmt, MYSQL_FIELD *field)
+ {
+   SQLULEN size= get_column_size(stmt, field);
+-  sprintf(buff, (size== SQL_NO_TOTAL ? "%d" :
+-      (sizeof(SQLULEN) == 4 ? "%lu" : "%llu")), size);
++  sprintf(buff, (size== SQL_NO_TOTAL ? "%ld" : "%lu"), size);
+   return size;
+ }
+ 
+diff -up mysql-connector-odbc-5.2.4-src/test/my_catalog1.c.p3 mysql-connector-odbc-5.2.4-src/test/my_catalog1.c
+--- mysql-connector-odbc-5.2.4-src/test/my_catalog1.c.p3	2013-02-22 13:23:30.260761898 +0100
++++ mysql-connector-odbc-5.2.4-src/test/my_catalog1.c	2013-02-22 13:25:08.554755176 +0100
+@@ -623,7 +623,7 @@ DECLARE_TEST(t_tables_bug)
+     fprintf(stdout, "#  Column Name   : %s\n", szColName);
+     fprintf(stdout, "#  NameLengh     : %d\n", pcbColName);
+     fprintf(stdout, "#  DataType      : %d\n", pfSqlType);
+-    fprintf(stdout, "#  ColumnSize    : %d\n", pcbColDef);
++    fprintf(stdout, "#  ColumnSize    : %ld\n", pcbColDef);
+     fprintf(stdout, "#  DecimalDigits : %d\n", pibScale);
+     fprintf(stdout, "#  Nullable      : %d\n", pfNullable);
+ 
+diff -up mysql-connector-odbc-5.2.4-src/test/my_cursor.c.p3 mysql-connector-odbc-5.2.4-src/test/my_cursor.c
+--- mysql-connector-odbc-5.2.4-src/test/my_cursor.c.p3	2013-01-24 18:43:33.000000000 +0100
++++ mysql-connector-odbc-5.2.4-src/test/my_cursor.c	2013-02-22 13:22:16.812766920 +0100
+@@ -711,7 +711,7 @@ DECLARE_TEST(t_pos_datetime_delete1)
+ 
+     rc = SQLRowCount(hstmt1,&row_count);
+     mystmt(hstmt1,rc);
+-    fprintf(stdout, "rows affected: %d\n", row_count);
++    fprintf(stdout, "rows affected: %ld\n", row_count);
+     myassert(row_count == 1);
+ 
+     rc = SQLExtendedFetch(hstmt,SQL_FETCH_NEXT,1,NULL,&rgfRowStatus);
+@@ -732,7 +732,7 @@ DECLARE_TEST(t_pos_datetime_delete1)
+ 
+     rc = SQLRowCount(hstmt1,&row_count);
+     mystmt(hstmt1,rc);
+-    fprintf(stdout, "rows affected: %d\n", row_count);
++    fprintf(stdout, "rows affected: %ld\n", row_count);
+     myassert(row_count == 1);
+ 
+     SQLFreeStmt(hstmt,SQL_UNBIND);

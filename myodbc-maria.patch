@@ -1,0 +1,30 @@
+MariaDB has slightly changed data types of some variables, so we need to reflect
+that in own local copy of mysys files.
+
+diff -up mysql-connector-odbc-5.1.11-src/util/array.c.maria mysql-connector-odbc-5.1.11-src/util/array.c
+--- mysql-connector-odbc-5.1.11-src/util/array.c.maria	2013-02-22 11:51:24.627139740 +0100
++++ mysql-connector-odbc-5.1.11-src/util/array.c	2013-02-22 11:53:27.766131320 +0100
+@@ -92,7 +92,7 @@ my_bool init_dynamic_array(DYNAMIC_ARRAY
+     FALSE	Ok
+ */
+ 
+-my_bool insert_dynamic(DYNAMIC_ARRAY *array, uchar* element)
++my_bool insert_dynamic(DYNAMIC_ARRAY *array, const uchar* element)
+ {
+   uchar* buffer;
+   if (array->elements == array->max_element)
+diff -up mysql-connector-odbc-5.1.11-src/util/int2str.c.maria mysql-connector-odbc-5.1.11-src/util/int2str.c
+--- mysql-connector-odbc-5.1.11-src/util/int2str.c.maria	2013-02-22 12:00:37.188101956 +0100
++++ mysql-connector-odbc-5.1.11-src/util/int2str.c	2013-02-22 12:00:44.097101484 +0100
+@@ -19,9 +19,9 @@
+ /*
+   _dig_vec arrays are public because they are used in several outer places.
+ */
+-char _dig_vec_upper[] =
++const char _dig_vec_upper[] =
+   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+-char _dig_vec_lower[] =
++const char _dig_vec_lower[] =
+   "0123456789abcdefghijklmnopqrstuvwxyz";
+ 
+ 

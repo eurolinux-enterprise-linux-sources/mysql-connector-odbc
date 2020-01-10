@@ -1,0 +1,15 @@
+It seems the buffer size is not sufficient in some situations, so we enlarge it as sanity fix.
+RHBZ#948619
+
+diff -up mysql-connector-odbc-5.2.5-src/driver/catalog.c.buffsize mysql-connector-odbc-5.2.5-src/driver/catalog.c
+--- mysql-connector-odbc-5.2.5-src/driver/catalog.c.buffsize	2013-05-24 14:13:00.148674573 +0200
++++ mysql-connector-odbc-5.2.5-src/driver/catalog.c	2013-05-24 14:13:14.338674325 +0200
+@@ -153,7 +153,7 @@ static MYSQL_RES *mysql_table_status_i_s
+ {
+   MYSQL *mysql= &stmt->dbc->mysql;
+   /** the buffer size should count possible escapes */
+-  char buff[255+4*NAME_CHAR_LEN], *to;
++  char buff[1024+4*NAME_CHAR_LEN], *to;
+   my_bool clause_added= FALSE;
+ 
+   to= strmov(buff, "SELECT TABLE_NAME, TABLE_COMMENT, TABLE_TYPE, TABLE_SCHEMA \

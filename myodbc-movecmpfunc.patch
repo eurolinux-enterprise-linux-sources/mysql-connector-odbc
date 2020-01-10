@@ -1,0 +1,104 @@
+The symbol my_charset_latin1 is not exported, but upstream uses it probably,
+since they use some weird environment with mysql buildroot. Anyway, it is only
+used only for case-insensitive comparison of encoding identificators, which
+should include only ASCII chars. So we really don't need any charset
+information and can use simple case-insensitive strcmp.
+
+However, the only function doing that is defined at driver/utility.c so it
+would be better to move it to util/stringutil.c and have it available as
+a general purpose function. That's basically what this patch does.
+
+diff -up mysql-connector-odbc-5.2.4-src/driver/utility.c.p5 mysql-connector-odbc-5.2.4-src/driver/utility.c
+--- mysql-connector-odbc-5.2.4-src/driver/utility.c.p5	2013-02-25 14:37:53.459350162 +0100
++++ mysql-connector-odbc-5.2.4-src/driver/utility.c	2013-02-25 14:37:53.494350161 +0100
+@@ -2239,33 +2239,6 @@ my_bool reget_current_catalog(DBC FAR *d
+ 
+ 
+ /*
+-  @type    : myodbc internal
+-  @purpose : compare strings without regarding to case
+-*/
+-
+-int myodbc_strcasecmp(const char *s, const char *t)
+-{
+-  while (toupper((uchar) *s) == toupper((uchar) *t++))
+-    if (!*s++)
+-      return 0;
+-  return((int) toupper((uchar) s[0]) - (int) toupper((uchar) t[-1]));
+-}
+-
+-
+-/*
+-  @type    : myodbc internal
+-  @purpose : compare strings without regarding to case
+-*/
+-
+-int myodbc_casecmp(const char *s, const char *t, uint len)
+-{
+-  while (len-- != 0 && toupper(*s++) == toupper(*t++))
+-    ;
+-  return (int)len + 1;
+-}
+-
+-
+-/*
+   @type    : myodbc3 internal
+   @purpose : logs the queries sent to server
+ */
+diff -up mysql-connector-odbc-5.2.4-src/util/stringutil.c.p5 mysql-connector-odbc-5.2.4-src/util/stringutil.c
+--- mysql-connector-odbc-5.2.4-src/util/stringutil.c.p5	2013-01-24 18:43:33.000000000 +0100
++++ mysql-connector-odbc-5.2.4-src/util/stringutil.c	2013-02-25 14:38:37.263348956 +0100
+@@ -905,13 +906,40 @@ static const MY_CSET_OS_NAME charsets[]=
+ };
+ 
+ 
++/*
++ *   @type    : myodbc internal
++ *   @purpose : compare strings without regarding to case
++ */
++
++int myodbc_strcasecmp(const char *s, const char *t)
++{
++  while (toupper(*s) == toupper(*t++))
++    if (!*s++)
++      return 0;
++  return((int) toupper(s[0]) - (int) toupper(t[-1]));
++}
++
++
++/*
++  @type    : myodbc internal
++  @purpose : compare strings without regarding to case
++*/
++
++int myodbc_casecmp(const char *s, const char *t, uint len)
++{
++  while (len-- != 0 && toupper(*s++) == toupper(*t++))
++    ;
++  return (int)len + 1;
++}
++
++
+ const char *
+ my_os_charset_to_mysql_charset(const char *csname)
+ {
+   const MY_CSET_OS_NAME *csp;
+   for (csp= charsets; csp->os_name; ++csp)
+   {
+-    if (!my_strcasecmp(&my_charset_latin1, csp->os_name, csname))
++    if (!myodbc_strcasecmp(csp->os_name, csname))
+     {
+       switch (csp->param)
+       {
+diff -up mysql-connector-odbc-5.2.4-src/util/stringutil.h.p5 mysql-connector-odbc-5.2.4-src/util/stringutil.h
+--- mysql-connector-odbc-5.2.4-src/util/stringutil.h.p5	2013-01-24 18:43:33.000000000 +0100
++++ mysql-connector-odbc-5.2.4-src/util/stringutil.h	2013-02-25 14:37:53.498350161 +0100
+@@ -117,6 +117,8 @@ size_t sqlwcharncat2(SQLWCHAR *dest, con
+ SQLWCHAR *sqlwcharncpy(SQLWCHAR *dest, const SQLWCHAR *src, size_t n);
+ 
+ char * myodbc_strlwr(char *target, size_t len);
++int myodbc_strcasecmp(const char *s, const char *t);
++int myodbc_casecmp(const char *s, const char *t, uint len);
+ #ifdef __cplusplus
+ }
+ #endif

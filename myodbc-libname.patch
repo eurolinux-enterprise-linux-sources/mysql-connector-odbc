@@ -1,0 +1,24 @@
+We use only mysqlclient library, but upstream still tends to use mysqlclient_r,
+so we need to change the library we link against.
+
+diff -up mysql-connector-odbc-5.2.4-src/cmake/FindMySQL.cmake.p1 mysql-connector-odbc-5.2.4-src/cmake/FindMySQL.cmake
+--- mysql-connector-odbc-5.2.4-src/cmake/FindMySQL.cmake.p1	2013-01-24 18:43:33.000000000 +0100
++++ mysql-connector-odbc-5.2.4-src/cmake/FindMySQL.cmake	2013-02-25 16:30:07.458164848 +0100
+@@ -64,7 +64,7 @@ IF (WIN32)
+ 				 $ENV{ProgramFiles}/MySQL/*/lib
+ 				 $ENV{SystemDrive}/MySQL/*/lib/${libsuffixDist})
+ ELSE (WIN32)
+-	FIND_LIBRARY(MYSQL_LIB NAMES mysqlclient_r
++	FIND_LIBRARY(MYSQL_LIB NAMES mysqlclient
+ 				 PATHS
+ 				 $ENV{MYSQL_DIR}/libmysql_r/.libs
+ 				 $ENV{MYSQL_DIR}/lib
+@@ -93,7 +93,7 @@ IF (MYSQL_INCLUDE_DIR AND MYSQL_LIB_DIR)
+ 	IF (WIN32)
+ 		SET(MYSQL_CLIENT_LIBS mysqlclient)
+ 	ELSE (WIN32)
+-		SET(MYSQL_CLIENT_LIBS mysqlclient_r)
++		SET(MYSQL_CLIENT_LIBS mysqlclient)
+ 	ENDIF (WIN32)
+ 	IF (MYSQL_ZLIB)
+ 		SET(MYSQL_CLIENT_LIBS ${MYSQL_CLIENT_LIBS} zlib)

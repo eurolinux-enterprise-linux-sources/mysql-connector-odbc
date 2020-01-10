@@ -1,0 +1,31 @@
+Add files extracted from mysql into the driver build script.
+
+diff -up mysql-connector-odbc-5.2.4-src/util/CMakeLists.txt.mysys mysql-connector-odbc-5.2.4-src/util/CMakeLists.txt
+--- mysql-connector-odbc-5.2.4-src/util/CMakeLists.txt.mysys	2013-01-24 18:43:33.000000000 +0100
++++ mysql-connector-odbc-5.2.4-src/util/CMakeLists.txt	2013-03-25 19:17:17.320764909 +0100
+@@ -26,7 +26,24 @@ SET(myodbc3u_SRCS stringutil.c
+                   stringutil.h
+                   unicode_transcode.c
+                   installer.c
+-                  installer.h)
++                  installer.h
++                  array.c
++                  list.c
++                  my_alloc.c
++                  my_malloc.c
++                  string.c
++                  int2str.c
++                  is_prefix.c
++                  longlong2str.c
++                  strcend.c
++                  strend.c
++                  strfill.c
++                  strmake.c
++                  strmov.c
++                  strxmov.c
++                  mysys_err.h
++                  mysys_priv.h
++)
+ 
+ IF(NOT WIN32)
+   SET(myodbc3u_SRCS ${myodbc3u_SRCS}

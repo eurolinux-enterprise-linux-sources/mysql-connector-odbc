@@ -1,0 +1,26 @@
+When looking for a terminating null character that isn't there and apparently
+isn't supposed to be there as the length of the string is kept in a separate
+variable. The code then tries to avoid a disaster by doing the right test after
+it has done the wrong test, but with a bit of bad luck the out-of-bounds read
+could cause a segmentation fault. Even if the error wouldn't affect the
+operation of the code, fixing it will save programmers from wasting their time
+chasing false alarms.
+
+This patch reverses the order of the two tests. I suppose checking for null
+characters is OK as an additional safety measure, but it needs to be done
+conditionally after the length test to avoid an out-of-bounds read.
+
+Upstream bug report: http://bugs.mysql.com/bug.php?id=64105
+
+diff -up mysql-connector-odbc-5.2.5-src/util/stringutil.c.cond mysql-connector-odbc-5.2.5-src/util/stringutil.c
+--- mysql-connector-odbc-5.2.5-src/util/stringutil.c.cond	2013-06-17 08:45:54.382640969 +0200
++++ mysql-connector-odbc-5.2.5-src/util/stringutil.c	2013-06-17 08:45:58.084640903 +0200
+@@ -94,7 +94,7 @@ SQLWCHAR *sqlchar_as_sqlwchar(CHARSET_IN
+     return NULL;
+   }
+ 
+-  for (pos= str, i= 0; *pos && pos < str_end; )
++  for (pos= str, i= 0; pos < str_end && *pos; )
+   {
+     if (sizeof(SQLWCHAR) == 4)
+     {
