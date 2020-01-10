@@ -1,7 +1,7 @@
 Summary: ODBC driver for MySQL
 Name: mysql-connector-odbc
 Version: 5.2.5
-Release: 6%{?dist}
+Release: 7%{?dist}
 Group: System Environment/Libraries
 URL: http://dev.mysql.com/downloads/connector/odbc/
 # exceptions allow library to be linked with most open source SW,
@@ -33,6 +33,7 @@ Patch8: mysql-connector-odbc-buffsize.patch
 Patch9: mysql-connector-odbc-cleartext.patch
 Patch10: mysql-connector-odbc-cond.patch
 Patch11: mysql-connector-odbc-5.2.5-aarch64.patch
+Patch12: 0001-Memory-leak-in-SQLPrepare-with-queries-that-use-para.patch
 
 BuildRequires: mysql-devel unixODBC-devel
 BuildRequires: cmake
@@ -57,6 +58,7 @@ tar xfz %{SOURCE1}
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
+%patch12 -p1
 
 %build
 # mysql 5.5.10 has stopped #define'ing THREAD in its exports, and has
@@ -103,6 +105,10 @@ rm -rf $RPM_BUILD_ROOT/usr/test
 %{_libdir}/lib*so
 
 %changelog
+* Fri Oct 13 2017 Augusto Caringi <acaringi@redhat.com> - 5.2.5-7
+- Add patch to fix memory leak in SQLPrepare.
+  Resolves: #1425160
+
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 5.2.5-6
 - Mass rebuild 2014-01-24
 

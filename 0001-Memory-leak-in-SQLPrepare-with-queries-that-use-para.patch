@@ -1,0 +1,148 @@
+From 4cf222c082950ff6a713792f68e2a2882135199e Mon Sep 17 00:00:00 2001
+From: Bogdan Degtyariov <bogdan.degtyariov@oracle.com>
+Date: Wed, 4 Sep 2013 16:46:27 +1000
+Subject: [PATCH] Memory leak in SQLPrepare with queries that use parameters
+ (Bug# 17400483/70113) - no test case
+
+---
+ ChangeLog                 |  2 ++
+ driver/catalog_no_i_s.c   |  1 +
+ driver/my_prepared_stmt.c | 21 ++++++++++++++-------
+ driver/my_stmt.c          | 35 ++++++++++++++++++++++-------------
+ 4 files changed, 39 insertions(+), 20 deletions(-)
+
+diff --git a/driver/catalog_no_i_s.c b/driver/catalog_no_i_s.c
+index ac54d3e..be4d616 100644
+--- a/driver/catalog_no_i_s.c
++++ b/driver/catalog_no_i_s.c
+@@ -2141,6 +2141,7 @@ mysql_tables(SQLHSTMT hstmt,
+       if (!row_count)
+       {
+         mysql_free_result(stmt->result);
++        stmt->result= NULL;
+         goto empty_set;
+       }
+ 
+diff --git a/driver/my_prepared_stmt.c b/driver/my_prepared_stmt.c
+index 71a5648..126d892 100644
+--- a/driver/my_prepared_stmt.c
++++ b/driver/my_prepared_stmt.c
+@@ -1,5 +1,5 @@
+ /*
+-  Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
++  Copyright (c) 2012-2013, Oracle and/or its affiliates. All rights reserved.
+ 
+   The MySQL Connector/ODBC is licensed under the terms of the GPLv2
+   <http://www.gnu.org/licenses/old-licenses/gpl-2.0.html>, like most
+@@ -223,10 +223,17 @@ void free_result_bind(STMT *stmt)
+ {
+   if (stmt->result_bind != NULL)
+   {
++    int i, field_cnt= field_count(stmt);
++
+     x_free(stmt->result_bind[0].is_null);
+     x_free(stmt->result_bind[0].length);
+     x_free(stmt->result_bind[0].error);
+-    x_free(stmt->result_bind[0].buffer);
++
++    /* buffer was allocated for each column */
++    for (i= 0; i < field_cnt; i++)
++    {
++      x_free(stmt->result_bind[i].buffer);
++    }
+ 
+     x_free(stmt->result_bind);
+     stmt->result_bind= 0;
+@@ -438,11 +445,11 @@ int ssps_bind_result(STMT *stmt)
+                                                       IS_PS_OUT_PARAMS(stmt));
+ 
+       stmt->result_bind[i].buffer_type  = p.type;
+-	  stmt->result_bind[i].buffer       = p.buffer;
+-	  stmt->result_bind[i].buffer_length= (unsigned long)p.size;
+-	  stmt->result_bind[i].length       = &len[i];
+-	  stmt->result_bind[i].is_null      = &is_null[i];
+-	  stmt->result_bind[i].error        = &err[i];
++	    stmt->result_bind[i].buffer       = p.buffer;
++	    stmt->result_bind[i].buffer_length= (unsigned long)p.size;
++	    stmt->result_bind[i].length       = &len[i];
++	    stmt->result_bind[i].is_null      = &is_null[i];
++	    stmt->result_bind[i].error        = &err[i];
+       stmt->result_bind[i].is_unsigned  = (field->flags & UNSIGNED_FLAG)? 1: 0;
+ 
+       stmt->array[i]= p.buffer;
+diff --git a/driver/my_stmt.c b/driver/my_stmt.c
+index 0dd059f..6e201d5 100644
+--- a/driver/my_stmt.c
++++ b/driver/my_stmt.c
+@@ -44,7 +44,16 @@ BOOL returned_result(STMT *stmt)
+   if (ssps_used(stmt))
+   {
+     /* Basically at this point we are supposed to get result already */
+-    return stmt->result ? TRUE : mysql_stmt_result_metadata(stmt->ssps) != NULL;
++    MYSQL_RES *temp_res= NULL;
++
++    if ((stmt->result != NULL) || 
++        (temp_res= mysql_stmt_result_metadata(stmt->ssps)) != NULL)
++    {
++      /* mysql_free_result checks for NULL, so we can always call it */
++      mysql_free_result(temp_res);
++      return TRUE;
++    }
++    return FALSE;
+   }
+   else
+   {
+@@ -55,24 +64,18 @@ BOOL returned_result(STMT *stmt)
+ 
+ my_bool free_current_result(STMT *stmt)
+ {
++  my_bool res= 0;
+   if (returned_result(stmt))
+   {
+     if (ssps_used(stmt))
+- 
+-    {
+-      my_bool res= mysql_stmt_free_result(stmt->ssps);
+-      stmt->result= NULL;
+-
+-      return res;
+-    }
+-    else
+     {
+-      mysql_free_result(stmt->result);
+-      stmt->result= NULL;
+-      return '\0';
++      res= mysql_stmt_free_result(stmt->ssps);
+     }
++    /* We need to always free stmt->result because SSPS keep metadata there */
++    mysql_free_result(stmt->result);
++    stmt->result= NULL;
+   }
+-  return '\0';
++  return res;
+ }
+ 
+ 
+@@ -98,6 +101,9 @@ MYSQL_RES * stmt_get_result(STMT *stmt, BOOL force_use)
+    we need to use/store each resultset of multiple resultsets */
+ MYSQL_RES * get_result_metadata(STMT *stmt, BOOL force_use)
+ {
++  /* just a precaution, mysql_free_result checks for NULL anywat */
++  mysql_free_result(stmt->result);
++
+   if (ssps_used(stmt))
+   {
+     stmt->result= mysql_stmt_result_metadata(stmt->ssps);
+@@ -399,6 +405,9 @@ SQLRETURN prepare(STMT *stmt, char * query, SQLINTEGER query_length)
+ 
+       stmt->param_count= mysql_stmt_param_count(stmt->ssps);
+ 
++      /* make sure we free the result from the previous time */
++      mysql_free_result(stmt->result);
++
+       /* Getting result metadata */
+       if ((stmt->result= mysql_stmt_result_metadata(stmt->ssps)))
+       {
+-- 
+2.13.3
+
